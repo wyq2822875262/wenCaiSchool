@@ -127,7 +127,21 @@ python3 main.py
 - `docs:` 文档
 - `chore:` 杂项/依赖/脚手架
 
-## 6. 常见问题
+## 6. 代码整理与优化记录
+
+在不改变原有业务流程的前提下，本次做了以下整理与增强，便于稳定运行与排查问题：
+
+- 日志替换：将 `api/course.py` 中遗留的 `print()` 全部替换为 `logger.info/logger.debug`，并补齐对应异常捕获。
+- 异常处理：
+  - `api/student.py:get_learn_info()` 增加 `timeout`、`raise_for_status()`、`code!=1000` 的显式判断与异常处理。
+  - `api/course.py:getItemTypeTotalCount()` / `automaticSubmit()` / `submitExam()` 增加网络异常处理与返回值(成功/失败)。
+- 入口梳理：
+  - `main.py` 逻辑拆分为 `_read_config()` + `main()`，减少嵌套；
+  - 配置项增加 `fallback`，并支持从 `config.ini` 的 `openlearning` 读取 `learning_user_id`(不存在则回退到原默认值)，避免硬编码。
+  - 对关键字段增加空值检查与类型转换保护，降低运行时 `NoneType`/`ValueError` 风险。
+- logger 兼容性：`utils/logger_config.py` 增加 `color_str()`，用于兼容 `api/course.py` 中 tqdm 的彩色 `bar_format`；同时防止同名 logger 重复添加 handler 导致日志重复输出。
+
+## 7. 常见问题
 
 - 报错 `ModuleNotFoundError: No module named 'tqdm'`
   - 执行 `pip install -r requirements.txt`

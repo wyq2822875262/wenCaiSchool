@@ -161,30 +161,51 @@ class Student:
             return None
 
     def get_learn_info(self):
-        """
-        获取学生学习信息
-        :return:
-        """
+        """获取学生学习信息(课程列表等)。"""
+
+        if not self.termCode:
+            logger.error("termCode 为空，无法获取学习信息")
+            return None
+
         url = "http://jjyjwgl.suse.edu.cn:8182/scqhgdx_student/student_learn.action"
-
-        params = {
-            'req': "getStudentLearnInfo"
-        }
-
-        payload = {
-            'term_code': self.termCode
-        }
-
+        params = {'req': "getStudentLearnInfo"}
+        payload = {'term_code': self.termCode}
         headers = self._build_headers(
             "http://jjyjwgl.suse.edu.cn:8182/scqhgdx_student/console/apply/studyOnline/index.html"
         )
-        response = requests.post(url, params=params, data=payload, headers=headers)
-        resp_data = response.json()
-        course_data = aes_decrypt(resp_data.get('data'))
-        logger.info("课程总数: %s", course_data.get('courseTotalCount'))
-        for course in course_data.get('courseInfoList'):
-            logger.info("课程编号：%s，课程名称: %s", course.get('courseId'), course.get('courseName'))
-        return course_data
+
+        try:
+            response = requests.post(url, params=params, data=payload, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            resp_data = response.json()
+            if resp_data.get('code') != 1000:
+                logger.warning("学习信息获取失败，错误原因：%s", resp_data.get('message'))
+                return None
+
+            course_data = aes_decrypt(resp_data.get('data'))
+            if not isinstance(course_data, dict):
+                logger.error("学习信息解密后格式错误")
+                return None
+
+            logger.info("课程总数: %s", course_data.get('courseTotalCount'))
+            for course in course_data.get('courseInfoList') or []:
+                logger.info("课程编号：%s，课程名称: %s", course.get('courseId'), course.get('courseName'))
+
+            return course_data
+
+        except requests.exceptions.Timeout:
+            logger.error("学习信息请求超时")
+            return None
+        except requests.exceptions.RequestException as req_error:
+            logger.error("学习信息网络请求异常: %s", str(req_error))
+            return None
+        except json.JSONDecodeError as json_error:
+            logger.error("学习信息 JSON 解析失败: %s", str(json_error))
+            return None
+        except Exception as e:
+            logger.error("获取学习信息时发生未知异常: %s", str(e))
+            return None
 
     def _build_headers(self, referer):
         """

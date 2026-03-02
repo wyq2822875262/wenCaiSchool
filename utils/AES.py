@@ -1,4 +1,5 @@
-import json, base64
+import json
+import base64
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
@@ -45,5 +46,9 @@ def aes_decrypt(ciphertext):
         return plaintext
 
 if __name__ == '__main__':
+    # 本地解密测试，仅用于开发调试
     data = aes_decrypt("hOzniORz0aV2/qDzSKeobPT7hQGoIr/luy+lJaHEPHA=")
-    print(data)
+    from utils.logger_config import setup_logger
+
+    _logger = setup_logger('utils.AES', 'main.log')
+    _logger.info("AES decrypt demo: %s", data)

@@ -428,9 +428,20 @@ class Course:
 
         headers = self._build_headers()
 
-        response = requests.post(url, params=params, data=payload, headers=headers)
-
-        print(response.text)
+        try:
+            response = requests.post(url, params=params, data=payload, headers=headers, timeout=10)
+            response.raise_for_status()
+            logger.debug("getItemTypeTotalCount 响应: %s", response.text)
+            return True
+        except requests.exceptions.Timeout:
+            logger.error("getItemTypeTotalCount 请求超时")
+            return False
+        except requests.exceptions.RequestException as req_error:
+            logger.error("getItemTypeTotalCount 网络请求异常: %s", str(req_error))
+            return False
+        except Exception as e:
+            logger.error("getItemTypeTotalCount 发生未知异常: %s", str(e))
+            return False
 
     def getHomWorkList(self,exam_id):
         """
@@ -505,9 +516,21 @@ class Course:
 
         headers = self._build_headers()
 
-        response = requests.post(url, params=params, data=payload, headers=headers)
-        logger.info(f"对第【{itemData['itemNo']}】题进行作答")
-        print(response.text)
+        try:
+            response = requests.post(url, params=params, data=payload, headers=headers, timeout=10)
+            response.raise_for_status()
+            logger.info("对第【%s】题进行作答", itemData.get('itemNo'))
+            logger.debug("automaticSubmit 响应: %s", response.text)
+            return True
+        except requests.exceptions.Timeout:
+            logger.error("automaticSubmit 请求超时")
+            return False
+        except requests.exceptions.RequestException as req_error:
+            logger.error("automaticSubmit 网络请求异常: %s", str(req_error))
+            return False
+        except Exception as e:
+            logger.error("automaticSubmit 发生未知异常: %s", str(e))
+            return False
 
     def submitExam(self,exam_id,exam_score_id,courseName):
         # 交卷
@@ -536,9 +559,20 @@ class Course:
 
         headers = self._build_headers()
 
-        response = requests.post(url, params=params, data=payload, headers=headers)
-
-        print(response.text)
+        try:
+            response = requests.post(url, params=params, data=payload, headers=headers, timeout=10)
+            response.raise_for_status()
+            logger.info("submitExam 响应: %s", response.text)
+            return True
+        except requests.exceptions.Timeout:
+            logger.error("submitExam 请求超时")
+            return False
+        except requests.exceptions.RequestException as req_error:
+            logger.error("submitExam 网络请求异常: %s", str(req_error))
+            return False
+        except Exception as e:
+            logger.error("submitExam 发生未知异常: %s", str(e))
+            return False
     # ==== 辅助函数 ====
     def get_random_quote(self):
         """
