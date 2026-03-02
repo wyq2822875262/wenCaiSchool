@@ -1,2 +1,136 @@
 # wenCaiSchool
-文采学堂快速刷课阅读资料完成作业
+
+文采学堂(开放学习 openlearning)辅助学习脚本：自动读取课程列表，并按配置完成视频课件进度、课程评论、资料阅读、作业答题/提交等流程。
+
+> 说明：本项目通过抓包/模拟客户端请求与服务端交互；仅用于学习与研究。请自行评估并遵守目标平台与学校的相关规定。
+
+## 1. 项目结构
+
+```
+wenCaiSchool/
+  main.py                 # 程序入口：读取配置 -> 拉取学生/课程 -> 按开关执行
+  config.ini              # 运行配置(含 cookie/video_cookie/功能开关)
+  api/
+    student.py            # 学生与学期信息：getUserInfo/getTerm/getStudentLearnInfo
+    course.py             # 课程自动化：视频进度、评论、资料、作业
+  utils/
+    AES.py                # AES-CBC + Base64 加解密(与服务端协议一致)
+    logger_config.py      # 彩色控制台 + 文件日志
+  data.json               # (可能)题库/数据缓存
+  exam.json               # (可能)作业答案/题库
+  log/                    # 运行日志输出目录
+  .venv/                  # 本地虚拟环境(不建议提交)
+```
+
+## 2. 架构与执行流程
+
+核心调用链如下：
+
+- `main.py` 作为编排器
+- `api/student.py:Student` 负责获取用户与学习信息
+- `api/course.py:Course` 负责对每门课执行具体自动化动作
+- `utils/AES.py` 为接口参数/响应的加解密实现
+- `utils/logger_config.py` 统一日志
+
+### 2.1 启动流程(简化)
+
+1. `main.py` 读取 `config.ini`：`cookie`、`video_cookie`、以及 `Bbs/Document/Video/Homework` 开关
+2. 创建 `Student(cookie)`
+3. `Student.get_user_info()` 获取 `studentId` 等信息
+4. `Student.get_learn_info()` 获取课程列表 `courseInfoList`，并从 `filePath` query 中解析出 `school_code` 与 `grade_code`
+5. 遍历每个课程：创建 `Course(video_cookie, user_id, learning_user_id, courseCode, courseId, school_code, grade_code)`
+6. 根据开关执行：
+   - `Video=True` -> `Course.getCourseScormItemList()` -> `submitScormAndHistorySave()` 提交学习时长
+   - `Bbs=True` -> `getBbsScore()` 判断是否需要补评论 -> `forum_article()` 自动发表评论
+   - `Document=True` -> `getLearnContentDocumentList()` -> `savePoints()` 记录资料进度
+   - `Homework=True` -> `getLearnCourseExerciseList()` -> `getItemTypeTotalCount()` -> `getHomWorkList()` -> `automaticSubmit()` -> `submitExam()`
+
+### 2.2 模块职责
+
+- `api/student.py`
+  - `get_term()`：获取当前学期 `termCode`
+  - `get_user_info()`：获取学生基础信息(服务端返回 AES 加密 JSON)
+  - `get_learn_info()`：获取学习平台侧课程列表
+
+- `api/course.py`
+  - 视频/课件：`getCourseScormItemList()` 拉取章节，筛选未完成，逐节调用 `submitScormAndHistorySave()`
+  - 评论：`getBbsScore()` 获取分数差，`forum_article()` 发布随机内容
+  - 资料：`getLearnContentDocumentList()` 拉取资料，`savePoints()` 保存进度
+  - 作业：`getLearnCourseExerciseList()` 拉取作业；`getHomWorkList()` 拉取题目；`automaticSubmit()` 保存答案；`submitExam()` 交卷
+
+- `utils/AES.py`
+  - AES CBC 固定 `key/iv`，请求参数与响应 `data` 字段通常是 AES + Base64
+
+- `utils/logger_config.py`
+  - `setup_logger(name, log_file_name)` 同时输出到 `log/*.log` 与控制台(控制台带颜色)
+
+## 3. 运行方式
+
+### 3.1 创建虚拟环境(推荐)
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+```
+
+### 3.2 安装依赖
+
+本项目关键三方依赖：
+
+- `requests`
+- `tqdm`
+- `pycryptodome`(提供 `Crypto.*`)
+
+安装：
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3.3 配置
+
+编辑 `config.ini`：
+
+- `cookie`：学校站点侧的 cookie
+- `video_cookie`：openlearning 平台侧 cookie
+- `Video/Bbs/Document/Homework`：功能开关
+
+安全提示：`config.ini` 包含敏感 cookie，建议仅保存在本地，不要提交到 git。
+
+### 3.4 启动
+
+```bash
+python3 main.py
+```
+
+日志输出：`log/main.log`、`log/course.log`、`log/student.log`。
+
+## 4. 依赖与环境
+
+- Python: 3.10+ (当前仓库环境可用 3.11)
+- OS: macOS/Linux/Windows 均可(示例命令为类 Unix)
+
+依赖文件：`requirements.txt`
+
+## 5. Git 提交与仓库管理建议
+
+已提供基础仓库管理文件：
+
+- `.gitignore`：忽略虚拟环境、日志、IDE、敏感配置等
+- `.gitattributes`：统一文本换行与常见二进制文件标记
+
+建议的提交规范(可选)：
+
+- `feat:` 新功能
+- `fix:` 修复
+- `docs:` 文档
+- `chore:` 杂项/依赖/脚手架
+
+## 6. 常见问题
+
+- 报错 `ModuleNotFoundError: No module named 'tqdm'`
+  - 执行 `pip install -r requirements.txt`
+
+- 报错 `ModuleNotFoundError: No module named 'Crypto'`
+  - 安装 `pycryptodome`：`pip install pycryptodome`

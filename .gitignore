@@ -1,0 +1,28 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenv
+.venv/
+venv/
+ENV/
+
+# Logs
+log/
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# Local config / secrets
+config.ini
+*.ini
+
+# Data files (often user-specific)
+data.json
+exam.json
+
+# OS / misc
+Thumbs.db
